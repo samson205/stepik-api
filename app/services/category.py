@@ -18,7 +18,7 @@ class CategoryService:
     
     async def create_category(self, data: CategoryCreate) -> Category:
         if data.parent_id is not None:
-            parent = await self._get_category_by_id(data.parent_id)
+            parent = await self.get_category_by_id(data.parent_id)
             if parent is None:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -32,7 +32,7 @@ class CategoryService:
         return new_category
     
     async def update_category(self, category_id: int, data: CategoryCreate) -> Category:
-        category = await self._get_category_by_id(category_id)
+        category = await self.get_category_by_id(category_id)
         if not category:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -40,7 +40,7 @@ class CategoryService:
             )
 
         if data.parent_id is not None:
-            parent = await self._get_category_by_id(data.parent_id)
+            parent = await self.get_category_by_id(data.parent_id)
             if not parent:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -55,7 +55,7 @@ class CategoryService:
         return category
     
     async def delete_category(self, category_id: int) -> None:
-        category = await self._get_category_by_id(category_id)
+        category = await self.get_category_by_id(category_id)
         if not category:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -65,7 +65,7 @@ class CategoryService:
         category.is_active = False
         await self.db.commit()
 
-    async def _get_category_by_id(self, category_id: int) -> Category | None:
+    async def get_category_by_id(self, category_id: int) -> Category | None:
         result = await self.db.scalars(
             select(Category).where(Category.id == category_id, Category.is_active == True)
         )

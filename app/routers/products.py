@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, status
 
-from app.dependencies.db_depends import get_async_db
+from app.dependencies.services import get_product_service
 from app.security import get_current_seller
+from app.services import ProductService
 from app.schemas import ProductCreate, ProductRead
-from app.models import Product, Category, User
+from app.models import User
 
 router = APIRouter(
     prefix="/products",
@@ -14,123 +13,55 @@ router = APIRouter(
 
 
 @router.get("/", response_model=list[ProductRead])
-async def get_all_products(db: AsyncSession = Depends(get_async_db)):
-    result = await db.scalars(select(Product).where(Product.is_active == True))
-    return result.all()
+async def get_all_products(service: ProductService = Depends(get_product_service)):
+    result = await service.get_all_products()
+    return result
 
 
 @router.post("/", response_model=ProductRead, status_code=status.HTTP_201_CREATED)
 async def create_product(
     data: ProductCreate,
-    db: AsyncSession = Depends(get_async_db),
+    service: ProductService = Depends(get_product_service),
     seller: User = Depends(get_current_seller)
 ):
-    result = await db.scalars(select(Category).where(Category.id == data.category_id, Category.is_active == True))
-    if not result.first():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found or inactive"
-        )
-        
-    new_product = Product(**data.model_dump(), seller_id=seller.id)
-    db.add(new_product)
-    await db.commit()
-    await db.refresh(new_product)
-    return new_product
+    result = await service.create_product(data, seller.id)
+    return result
 
 
 @router.get("/category/{category_id}", response_model=list[ProductRead])
-async def get_products_by_category(category_id: int, db: AsyncSession = Depends(get_async_db)):
-    result = await db.scalars(select(Category).where(Category.id == category_id, Category.is_active == True))
-    category = result.first()
-    if not category:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found or inactive"
-        )
-
-    result = await db.scalars(select(Product).where(Product.category_id == category_id, Product.is_active == True))
-    return result.all()
+async def get_products_by_category(
+    category_id: int,
+    service: ProductService = Depends(get_product_service)
+):
+    result = await service.get_products_by_category(category_id)
+    return result
 
 
 @router.get("/{product_id}", response_model=ProductRead)
-async def get_product(product_id: int, db: AsyncSession = Depends(get_async_db)):
-    result = await db.scalars(select(Product).where(Product.id == product_id, Product.is_active == True))
-    product = result.first()
-    if not product:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Product not found or inactive"
-        )
-    
-    result = await db.scalars(select(Category).where(Category.id == product.category_id, Category.is_active == True))
-    category = result.first()
-    if not category:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found or inactive"
-        )
-    return product
+async def get_product(
+    product_id: int,
+    service: ProductService = Depends(get_product_service)
+):
+    result = await service.get_product_by_id(product_id)
+    return result
 
 
 @router.put("/{product_id}", response_model=ProductRead)
 async def update_product(
     product_id: int,
     data: ProductCreate,
-    db: AsyncSession = Depends(get_async_db),
+    service: ProductService = Depends(get_product_service),
     seller: User = Depends(get_current_seller)
 ):
-    result = await db.scalars(select(Product).where(Product.id == product_id, Product.is_active == True))
-    product = result.first()
-    if not product:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Product not found or inactive"
-        )
-    
-    if product.seller_id != seller.id and seller.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update your own products"
-        )
-    
-    result = await db.scalars(select(Category).where(Category.id == product.category_id, Category.is_active == True))
-    category = result.first()
-    if not category:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found or inactive"
-        )
-    
-    await db.execute(
-        update(Product).where(Product.id == product_id).values(**data.model_dump())
-    )
-    await db.commit()
-    await db.refresh(product)
-    return product
+    result = await service.update_product(product_id, data, seller)
+    return result
 
 
-@router.delete("/{product_id}", response_model=ProductRead)
+@router.delete("/{product_id}")
 async def delete_product(
     product_id: int,
-    db: AsyncSession = Depends(get_async_db),
+    service: ProductService = Depends(get_product_service),
     seller: User = Depends(get_current_seller)
 ):
-    result = await db.scalars(select(Product).where(Product.id == product_id, Product.is_active == True))
-    product = result.first()
-    if not product:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Product not found or inactive"
-        )
-    
-    if product.seller_id != seller.id and seller.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only delte your own products"
-        )
-    
-    product.is_active = False
-    await db.commit()
-    await db.refresh(product)
-    return product
+    await service.delete_product(product_id, seller)
+    return {"status": "success", "message": "Product marked as inactive"}
