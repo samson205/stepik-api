@@ -128,3 +128,8 @@ class ReviewCreate(BaseModel):
     product_id: Annotated[int, Field(..., description="Уникальный идентификатор товара, к которому написан отзыв")]
     comment: Annotated[str | None, Field(None, description="Комментарий отзыва")]
     grade: Annotated[int, Field(..., ge=1, le=5, description="Оценка")]
+
+
+class ReviewUpdate(BaseModel):
+    comment: str | None
+    grade: Annotated[int | None, Field(None, ge=1, le=5)]

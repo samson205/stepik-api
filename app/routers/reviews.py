@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, status
 from app.dependencies.services import get_review_service
 from app.services import ReviewService
 from app.models import User
-from app.schemas import ReviewRead, ReviewCreate
+from app.schemas import ReviewRead, ReviewCreate, ReviewUpdate
 from app.security import get_current_buyer
 
 router = APIRouter(tags=["reviews"])
@@ -33,6 +33,17 @@ async def get_reviews_by_product(
     service: ReviewService = Depends(get_review_service)
 ):
     result = await service.get_reviews_by_product_id(product_id)
+    return result
+
+
+@router.put("/reviews/{review_id}", response_model=ReviewRead)
+async def update_review(
+    review_id: int,
+    data: ReviewUpdate,
+    service: ReviewService = Depends(get_review_service),
+    buyer: User = Depends(get_current_buyer)
+):
+    result = await service.update_review(review_id, data, buyer)
     return result
 
 

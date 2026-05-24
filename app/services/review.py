@@ -3,7 +3,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Review, User
-from app.schemas import ReviewCreate
+from app.schemas import ReviewCreate, ReviewUpdate
 from app.services import ProductService
 
 
@@ -35,6 +35,30 @@ class ReviewService:
             select(Review).where(Review.product_id == product_id, Review.is_active == True)
         )
         return list(result.all())
+    
+    async def update_review(self, review_id, data: ReviewUpdate, buyer: User) -> Review:
+        result = await self.db.scalars(select(Review).where(Review.id == review_id, Review.is_active == True))
+        review = result.first()
+        if not review:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Review not found or inactive"
+            )
+        
+        if buyer.id != review.user_id and buyer.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only update your own reviews"
+            )
+        
+        upd_data = data.model_dump(exclude_unset=True)
+        for key, value in upd_data.items():
+            setattr(review, key, value)
+        await self.db.commit()
+        await self.db.refresh(review)
+        await self._update_product_rating(review.product_id)
+        return review
+
     
     async def delete_review(self, review_id: int, buyer: User) -> None:
         result = await self.db.scalars(select(Review).where(Review.id == review_id, Review.is_active == True))
