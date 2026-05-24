@@ -13,6 +13,7 @@ router = APIRouter(tags=["reviews"])
 async def get_all_reviews(
     service: ReviewService = Depends(get_review_service)
 ):
+    """Получение всех активных отзывов"""
     result = await service.get_all_reviews()
     return result
 
@@ -23,6 +24,7 @@ async def create_review(
     service: ReviewService = Depends(get_review_service),
     buyer: User = Depends(get_current_buyer)
 ):
+    """Создание нового отзыва"""
     result = await service.create_review(data, buyer.id)
     return result
 
@@ -32,6 +34,7 @@ async def get_reviews_by_product(
     product_id: int,
     service: ReviewService = Depends(get_review_service)
 ):
+    """Получение активных отзывов про какой-либо активный товар"""
     result = await service.get_reviews_by_product_id(product_id)
     return result
 
@@ -43,6 +46,7 @@ async def update_review(
     service: ReviewService = Depends(get_review_service),
     buyer: User = Depends(get_current_buyer)
 ):
+    """Обновление информации отзыва"""
     result = await service.update_review(review_id, data, buyer)
     return result
 
@@ -53,5 +57,6 @@ async def delete_review(
     service: ReviewService = Depends(get_review_service),
     buyer: User = Depends(get_current_buyer)
 ):
+    """Удаление отзыва (установка is_active = False)"""
     await service.delete_review(review_id, buyer)
     return {"message": "Review deleted!"}

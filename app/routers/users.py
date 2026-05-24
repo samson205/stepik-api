@@ -15,6 +15,7 @@ async def create_user(
     data: UserCreate,
     service: UserService = Depends(get_user_service)
 ):
+    """Регистрация нового пользователя"""
     result = await service.create_user(data)
     return result
 
@@ -25,6 +26,7 @@ async def update_current_user(
     user: User = Depends(get_current_user),
     service: UserService = Depends(get_user_service)
 ):
+    """Обновление данных пользователя (email, пароль)"""
     result = await service.update_user(user.id, data)
     return result
 
@@ -33,6 +35,7 @@ async def update_current_user(
 async def get_current_profile(
     user: User = Depends(get_current_user)
 ):
+    """Получение текущего профиля пользователя"""
     return user
 
 
@@ -41,6 +44,7 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     service: AuthService = Depends(get_auth_service)
 ):
+    """Получение access и refresh токенов"""
     result = await service.create_tokens(form_data.username, form_data.password)
     return result
 
@@ -50,6 +54,7 @@ async def access_token(
     data: RefreshTokenRequest,
     service: AuthService = Depends(get_auth_service)
 ):
+    """Обновление access токена по refresh токену"""
     result = await service.create_access_token(data.refresh_token)
     return result
 
@@ -59,6 +64,7 @@ async def refresh_token(
     data: RefreshTokenRequest,
     service: AuthService = Depends(get_auth_service)
 ):
+    """Обновление refresh токена по refresh токену"""
     result = await service.create_refresh_token(data.refresh_token)
     return result
 
@@ -70,5 +76,6 @@ async def update_role(
     admin: User = Depends(get_current_admin),
     service: UserService = Depends(get_user_service)
 ):
+    """Обновление роли пользователя админом"""
     result = await service.update_user_role(user_id, admin.id, data)
     return result

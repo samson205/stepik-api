@@ -11,6 +11,7 @@ router = APIRouter(prefix="/categories", tags=["categories"])
 
 @router.get("/", response_model=list[CategoryRead])
 async def get_all_categories(service: CategoryService = Depends(get_category_service)):
+    """Получение всех активных категорий"""
     result = await service.get_all_categories()
     return result
 
@@ -21,6 +22,7 @@ async def create_category(
     service: CategoryService = Depends(get_category_service),
     admin: User = Depends(get_current_admin)
 ):
+    """Создание новой категории"""
     result = await service.create_category(data)
     return result
 
@@ -32,6 +34,7 @@ async def update_category(
     service: CategoryService = Depends(get_category_service),
     admin: User = Depends(get_current_admin)
 ):
+    """Обновление активной категории"""
     result = await service.update_category(category_id, data)
     return result
 
@@ -42,5 +45,6 @@ async def delete_category(
     service: CategoryService = Depends(get_category_service),
     admin: User = Depends(get_current_admin)
 ):
+    """Удаление категории (установка is_active = False)"""
     await service.delete_category(category_id)
     return {"status": "success", "message": "Category marked as inactive"}
