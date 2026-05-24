@@ -74,7 +74,7 @@ class ProductService:
                 detail="You can only update your own products"
             )
         
-        category = await self.category_service.get_category_by_id(product.category_id)
+        category = await self.category_service.get_category_by_id(data.category_id)
         if not category:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
