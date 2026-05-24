@@ -19,9 +19,9 @@ class ReviewService:
         await self.product_service.get_product_by_id(data.product_id)
         review = Review(**data.model_dump(), user_id=user_id)
         self.db.add(review)
+        await self._update_product_rating(data.product_id)
         await self.db.commit()
         await self.db.refresh(review)
-        await self._update_product_rating(data.product_id)
         return review
     
     async def get_all_reviews(self) -> list[Review]:
@@ -54,9 +54,9 @@ class ReviewService:
         upd_data = data.model_dump(exclude_unset=True)
         for key, value in upd_data.items():
             setattr(review, key, value)
+        await self._update_product_rating(review.product_id)
         await self.db.commit()
         await self.db.refresh(review)
-        await self._update_product_rating(review.product_id)
         return review
 
     
@@ -86,5 +86,4 @@ class ReviewService:
         avg_rating = result.first() or 0.0
         product = await self.product_service.get_product_by_id(product_id)
         product.rating = avg_rating
-        await self.db.commit()
     
