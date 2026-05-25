@@ -1,5 +1,7 @@
+from datetime import datetime
+
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Product, User
@@ -29,9 +31,19 @@ class ProductService:
         await self.db.refresh(new_product)
         return new_product
 
-    async def get_all_products(self) -> list[Product]:
-        result = await self.db.scalars(select(Product).where(Product.is_active == True))
-        return list(result.all())
+    async def get_all_products(self, page: int, page_size: int, **kwargs) -> dict:
+        filters = self._build_filters(**kwargs)
+        result = await self.db.scalars(
+            select(Product)
+            .where(*filters)
+            .order_by(Product.id)
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        return {
+            "total": await self._get_products_count(filters),
+            "items": list(result.all()) 
+        }
     
     async def get_products_by_category(self, category_id: int) -> list[Product]:
         category = await self.category_service.get_category_by_id(category_id)
@@ -99,3 +111,33 @@ class ProductService:
         
         product.is_active = False
         await self.db.commit()
+
+    async def _get_products_count(self, filters: list) -> int:
+        result = await self.db.scalar(
+            select(func.count(Product.id)).where(*filters)
+        )
+        return result or 0
+
+    def _build_filters(self, **kwargs) -> list:
+        filters = [Product.is_active == True]
+
+        if kwargs.get("category_id"):
+            filters.append(Product.category_id == kwargs["category_id"])
+        if kwargs.get("start_date"):
+            start_date = kwargs["start_date"]
+            start_datetime = datetime(start_date.year, start_date.month, start_date.day, 0, 0, 0)
+            filters.append(Product.created_at >= start_datetime)
+        if kwargs.get("end_date"):
+            end_date = kwargs["end_date"]
+            end_datetime = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
+            filters.append(Product.created_at <= end_datetime)
+        if kwargs.get("min_price"):
+            filters.append(Product.price >= kwargs["min_price"])
+        if kwargs.get("max_price"):
+            filters.append(Product.price <= kwargs["max_price"])
+        if kwargs.get("in_stock"):
+            filters.append(Product.stock > 0 if kwargs["in_stock"] else Product.stock == 0)
+        if kwargs.get("seller_id"):
+            filters.append(Product.seller_id == kwargs["seller_id"])
+
+        return filters

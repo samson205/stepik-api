@@ -57,11 +57,22 @@ class ProductRead(BaseModel):
     ]
     stock: Annotated[int, Field(..., description="Количество товара на складе")]
     rating: Annotated[float, Field(..., description="Средний рейтинг товара")]
+    created_at: Annotated[datetime, Field(..., description="Дата создания товара")]
+    updated_at: Annotated[datetime, Field(..., description="Дата обновления товара")]
     category_id: Annotated[
         int, Field(..., description="ID категори, к которой относится товар")
     ]
     seller_id: Annotated[int, Field(..., description="Уникальный идентификатор продавца")]
     is_active: Annotated[bool, Field(..., description="Активность товара")]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProductList(BaseModel):
+    total: Annotated[int, Field(..., ge=0, description="Общее кол-во товаров")]
+    page: Annotated[int, Field(..., ge=1, description="Номер текущей страницы")]
+    page_size: Annotated[int, Field(..., ge=1, description="Кол-во элементов на странице")]
+    items: Annotated[list["ProductRead"], Field(..., description="Товары для текущей страницы")]
 
     model_config = ConfigDict(from_attributes=True)
 
