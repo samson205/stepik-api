@@ -10,6 +10,9 @@ from app.database import Base
 
 class Product(Base):
     __tablename__ = "products"
+    __table_args__ = (
+        Index("ix_products_tsv_gin", "tsv", postgresql_using="gin"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -43,6 +46,6 @@ class Product(Base):
         nullable=False
     )
 
-    __table_args__ = (
-        Index("ix_products_tsv_gin", "tsv", postgresql_using="gin"),
-    )
+    cart_items: Mapped[list["CartItem"]] = relationship("CartItem", back_populates="product", # type: ignore
+                                                        cascade="all, delete-orphan")
+    
