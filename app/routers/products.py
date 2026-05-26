@@ -19,6 +19,7 @@ async def get_all_products(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     category_id: int | None = Query(None, description="ID категории для фильтрации"),
+    search: str | None = Query(None, min_length=1, description="Поиск по названию товара"),
     start_date: date | None = Query(None, description="Мин. дата создания"),
     end_date: date | None = Query(None, description="Макс. дата создания"),
     min_price: float | None = Query(None, ge=0, description="Мин. цена товара"),
@@ -40,21 +41,12 @@ async def get_all_products(
             detail="start_date cannot be greater than end_date"
         )
     
-    # if (start_date is not None) and (start_date > date.today()):
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="start_date cannot be greated than today"
-    #     )
     
-    # if (end_date is not None) and (end_date > date.today()):
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="end_date cannot be greated than today"
-    #     )
 
     result = await service.get_all_products(
         page, page_size,
         category_id = category_id,
+        search=search,
         start_date=start_date, end_date=end_date,
         min_price=min_price, max_price=max_price,
         in_stock=in_stock,

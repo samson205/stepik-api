@@ -123,6 +123,10 @@ class ProductService:
 
         if kwargs.get("category_id"):
             filters.append(Product.category_id == kwargs["category_id"])
+        if kwargs.get("search"):
+            search_value = kwargs["search"].strip()
+            if search_value:
+                filters.append(func.lower(Product.name).like(f"%{search_value.lower()}%"))
         if kwargs.get("start_date"):
             start_date = kwargs["start_date"]
             start_datetime = datetime(start_date.year, start_date.month, start_date.day, 0, 0, 0)
