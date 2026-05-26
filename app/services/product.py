@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from fastapi import HTTPException, status
-from sqlalchemy import select, func
+from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Product, User
@@ -32,17 +32,34 @@ class ProductService:
         return new_product
 
     async def get_all_products(self, page: int, page_size: int, **kwargs) -> dict:
-        filters = self._build_filters(**kwargs)
-        result = await self.db.scalars(
-            select(Product)
-            .where(*filters)
-            .order_by(Product.id)
-            .offset((page - 1) * page_size)
-            .limit(page_size)
-        )
+        dict_filters = self._build_filters(**kwargs)
+        filters = dict_filters.get("filters")
+        if not filters:
+            raise Exception
+        rank_col = dict_filters.get("rank_col")
+        if rank_col is not None:
+            products_stmt = (
+                select(Product, rank_col)
+                .where(*filters)
+                .order_by(desc(rank_col), Product.id)
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
+            result = await self.db.execute(products_stmt)
+            rows = result.all()
+            items = [row[0] for row in rows]
+        else:
+            products_stmt = (
+                select(Product)
+                .where(*filters)
+                .order_by(Product.id)
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
+            items = (await self.db.scalars(products_stmt)).all()
         return {
             "total": await self._get_products_count(filters),
-            "items": list(result.all()) 
+            "items": list(items) 
         }
     
     async def get_products_by_category(self, category_id: int) -> list[Product]:
@@ -118,15 +135,18 @@ class ProductService:
         )
         return result or 0
 
-    def _build_filters(self, **kwargs) -> list:
+    def _build_filters(self, **kwargs) -> dict:
         filters = [Product.is_active == True]
+        rank_col = None
 
         if kwargs.get("category_id"):
             filters.append(Product.category_id == kwargs["category_id"])
         if kwargs.get("search"):
             search_value = kwargs["search"].strip()
             if search_value:
-                filters.append(func.lower(Product.name).like(f"%{search_value.lower()}%"))
+                ts_query = func.websearch_to_tsquery('english', search_value)
+                filters.append(Product.tsv.op('@@')(ts_query))
+                rank_col = func.ts_rank_cd(Product.tsv, ts_query).label("rank")
         if kwargs.get("start_date"):
             start_date = kwargs["start_date"]
             start_datetime = datetime(start_date.year, start_date.month, start_date.day, 0, 0, 0)
@@ -144,4 +164,7 @@ class ProductService:
         if kwargs.get("seller_id"):
             filters.append(Product.seller_id == kwargs["seller_id"])
 
-        return filters
+        return {
+            "filters": filters,
+            "rank_col": rank_col
+        }
