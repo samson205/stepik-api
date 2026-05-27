@@ -49,3 +49,5 @@ class Product(Base):
     cart_items: Mapped[list["CartItem"]] = relationship("CartItem", back_populates="product", # type: ignore
                                                         cascade="all, delete-orphan")
     
+    order_items: Mapped[list["OrderItem"]] = relationship("OrderItem", back_populates="product") # type: ignore
+    

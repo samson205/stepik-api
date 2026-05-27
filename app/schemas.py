@@ -174,3 +174,35 @@ class CartRead(BaseModel):
     items: Annotated[list["CartItemRead"], Field(default_factory=list, description="Содержимое корзины")]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class OrderItemRead(BaseModel):
+    id: Annotated[int, Field(..., description="ID позиции заказа")]
+    product_id: Annotated[int, Field(..., description="ID товара")]
+    quantity: Annotated[int, Field(..., ge=1, description="Количество товара")]
+    unit_price: Annotated[Decimal, Field(..., ge=0, description="Цена за единицу товара на момент покупки")]
+    total_price: Annotated[Decimal, Field(..., ge=0, description="Сумма по позиции")]
+    product: Annotated[ProductRead | None, Field(..., description="Полная информация о товаре")]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OrderRead(BaseModel):
+    id: Annotated[int, Field(..., description="ID заказа")]
+    user_id: Annotated[int, Field(..., description="ID пользователя")]
+    status: Annotated[str, Field(..., description="Текущий статус заказа")]
+    total_amount: Annotated[Decimal, Field(..., ge=0, description="общая стоимость")]
+    created_at: Annotated[datetime, Field(..., description="Когда был создан заказ")]
+    updated_at: Annotated[datetime, Field(..., description="Когда последний раз обновлялся")]
+    items: Annotated[list["OrderItemRead"], Field(default_factory=list, description="Список позиций")]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OrderList(BaseModel):
+    total: Annotated[int, Field(..., ge=0, description="Общее количество заказов")]
+    page: Annotated[int, Field(..., ge=1, description="Текущая страница")]
+    page_size: Annotated[int, Field(..., ge=1, description="Размер страницы")]
+    items: Annotated[list["OrderRead"], Field(..., description="Заказы на текущей странице")]
+
+    model_config = ConfigDict(from_attributes=True)
