@@ -170,7 +170,7 @@ class CartItemRead(BaseModel):
 class CartRead(BaseModel):
     user_id: Annotated[int, Field(..., description="ID пользователя")]
     total_quantity: Annotated[int, Field(..., ge=0, description="Общее количество товаров")]
-    total_prict: Annotated[Decimal, Field(..., ge=0, description="Общая стоимость товаров")]
+    total_price: Annotated[Decimal, Field(..., ge=0, description="Общая стоимость товаров")]
     items: Annotated[list["CartItemRead"], Field(default_factory=list, description="Содержимое корзины")]
 
     model_config = ConfigDict(from_attributes=True)

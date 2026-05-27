@@ -2,7 +2,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.db_depends import get_async_db
-from app.services import UserService, AuthService, CategoryService, ProductService, ReviewService
+from app.services import UserService, AuthService, CategoryService, ProductService, ReviewService, CartService
 
 
 async def get_user_service(db: AsyncSession = Depends(get_async_db)):
@@ -32,3 +32,10 @@ async def get_review_service(
         product_service: ProductService = Depends(get_product_service)
 ):
     return ReviewService(db, product_service)
+
+
+async def get_cart_service(
+        db: AsyncSession = Depends(get_async_db),
+        product_service: ProductService = Depends(get_product_service)
+):
+    return CartService(db, product_service)
