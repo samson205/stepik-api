@@ -72,7 +72,7 @@ class ProductList(BaseModel):
     total: Annotated[int, Field(..., ge=0, description="Общее кол-во товаров")]
     page: Annotated[int, Field(..., ge=1, description="Номер текущей страницы")]
     page_size: Annotated[int, Field(..., ge=1, description="Кол-во элементов на странице")]
-    items: Annotated[list["ProductRead"], Field(..., description="Товары для текущей страницы")]
+    items: Annotated[list["ProductRead"], Field(default_factory=list, description="Товары для текущей страницы")]
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -144,3 +144,33 @@ class ReviewCreate(BaseModel):
 class ReviewUpdate(BaseModel):
     comment: str | None
     grade: Annotated[int | None, Field(None, ge=1, le=5)]
+
+
+class CartItemBase(BaseModel):
+    product_id: Annotated[int, Field(..., description="ID товара")]
+    quantity: Annotated[int, Field(..., ge=1, description="Количество товара")]
+
+
+class CartItemCreate(CartItemBase):
+    pass
+
+
+class CartItemUpdate(BaseModel):
+    quantity: Annotated[int, Field(..., ge=1, description="Новое количество товара")]
+
+
+class CartItemRead(BaseModel):
+    id: Annotated[int, Field(..., description="ID позиции корзины")]
+    quantity: Annotated[int, Field(..., description="Количество товара")]
+    product: Annotated[ProductRead, Field(..., description="Информация о товаре")]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CartRead(BaseModel):
+    user_id: Annotated[int, Field(..., description="ID пользователя")]
+    total_quantity: Annotated[int, Field(..., ge=0, description="Общее количество товаров")]
+    total_price: Annotated[Decimal, Field(..., ge=0, description="Общая стоимость товаров")]
+    items: Annotated[list["CartItemRead"], Field(default_factory=list, description="Содержимое корзины")]
+
+    model_config = ConfigDict(from_attributes=True)
