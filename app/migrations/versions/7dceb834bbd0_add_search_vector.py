@@ -1,8 +1,8 @@
 """add search vector
 
-Revision ID: 291c8277d9a2
-Revises: 4c6de905178f
-Create Date: 2026-05-26 19:35:02.223589
+Revision ID: 7dceb834bbd0
+Revises: 387600cb6953
+Create Date: 2026-05-27 18:06:55.268540
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '291c8277d9a2'
-down_revision: Union[str, Sequence[str], None] = '4c6de905178f'
+revision: str = '7dceb834bbd0'
+down_revision: Union[str, Sequence[str], None] = '387600cb6953'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
