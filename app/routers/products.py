@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, Query
 
 from app.dependencies.services import get_product_service
 from app.security import get_current_seller
@@ -41,8 +41,6 @@ async def get_all_products(
             detail="start_date cannot be greater than end_date"
         )
     
-    
-
     result = await service.get_all_products(
         page, page_size,
         category_id = category_id,
@@ -62,12 +60,13 @@ async def get_all_products(
 
 @router.post("/", response_model=ProductRead, status_code=status.HTTP_201_CREATED)
 async def create_product(
-    data: ProductCreate,
+    data: ProductCreate = Depends(ProductCreate.as_form),
+    image: UploadFile | None = File(None),
     service: ProductService = Depends(get_product_service),
     seller: User = Depends(get_current_seller)
 ):
     """Создание нового товара"""
-    result = await service.create_product(data, seller.id)
+    result = await service.create_product(data, image, seller.id)
     return result
 
 
@@ -94,12 +93,13 @@ async def get_product(
 @router.put("/{product_id}", response_model=ProductRead)
 async def update_product(
     product_id: int,
-    data: ProductCreate,
+    data: ProductCreate = Depends(ProductCreate.as_form),
+    image: UploadFile | None = File(None),
     service: ProductService = Depends(get_product_service),
     seller: User = Depends(get_current_seller)
 ):
     """Обновление информации о товаре"""
-    result = await service.update_product(product_id, data, seller)
+    result = await service.update_product(product_id, data, image, seller)
     return result
 
 

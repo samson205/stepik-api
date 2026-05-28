@@ -1,12 +1,20 @@
+import uuid
 from datetime import datetime
+from pathlib import Path
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Product, User
 from app.schemas import ProductCreate
 from app.services import CategoryService
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+MEDIA_ROOT = BASE_DIR / "media" / "products"
+MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+MAX_IMAGE_SIZE = 2 * 1024 * 1024
 
 
 class ProductService:
@@ -17,7 +25,7 @@ class ProductService:
         self.db = db
         self.category_service = category_service
 
-    async def create_product(self, data: ProductCreate, seller_id: int) -> Product:
+    async def create_product(self, data: ProductCreate, image: UploadFile | None, seller_id: int) -> Product:
         category = await self.category_service.get_category_by_id(data.category_id)
         if not category:
             raise HTTPException(
@@ -25,7 +33,8 @@ class ProductService:
                 detail="Category not found or inactive"
             )
             
-        new_product = Product(**data.model_dump(), seller_id=seller_id)
+        image_url = await self._save_product_image(image) if image else None
+        new_product = Product(**data.model_dump(), seller_id=seller_id, image_url=image_url)
         self.db.add(new_product)
         await self.db.commit()
         await self.db.refresh(new_product)
@@ -77,7 +86,8 @@ class ProductService:
             )
         return product
     
-    async def update_product(self, product_id: int, data: ProductCreate, seller: User) -> Product:
+    async def update_product(self, product_id: int, data: ProductCreate,
+                             image: UploadFile | None, seller: User) -> Product:
         product = await self.get_product_by_id(product_id)
         
         if product.seller_id != seller.id and seller.role != "admin":
@@ -96,6 +106,10 @@ class ProductService:
         upd_data = data.model_dump(exclude_unset=True)
         for key, value in upd_data.items():
             setattr(product, key, value)
+        if image:
+            self._remove_product_image(product.image_url)
+            product.image_url = await self._save_product_image(image)
+
         await self.db.commit()
         await self.db.refresh(product)
         return product
@@ -109,8 +123,41 @@ class ProductService:
                 detail="You can only delete your own products"
             )
         
+        self._remove_product_image(product.image_url)
         product.is_active = False
+        product.image_url = None
         await self.db.commit()
+
+    @staticmethod
+    async def _save_product_image(file: UploadFile) -> str:
+        if file.content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only JPG, PNG or WebP images are allowed"
+            )
+        
+        content = await file.read()
+        if len(content) > MAX_IMAGE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Image is too large"
+            )
+        
+        extension = Path(file.filename or "").suffix.lower() or ".jpg"
+        file_name = f"{uuid.uuid4()}{extension}"
+        file_path = MEDIA_ROOT / file_name
+        file_path.write_bytes(content)
+
+        return f"/media/products/{file_name}"
+
+    @staticmethod
+    def _remove_product_image(url: str | None) -> None:
+        if not url:
+            return
+        relative_path = url.lstrip("/")
+        file_path = BASE_DIR / relative_path
+        if file_path.exists():
+            file_path.unlink()
 
     async def _get_products_count(self, filters: list) -> int:
         result = await self.db.scalar(

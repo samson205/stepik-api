@@ -224,3 +224,6 @@ alembic.ini
 
 # database
 *.db
+
+# media
+media
